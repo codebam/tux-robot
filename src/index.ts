@@ -404,7 +404,7 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 							await env.CONVERSATION_HISTORY.delete(`business_facts:${ownerData.username}`);
 						}
 						if (ownerData.name) {
-							await env.CONVERSATION_HISTORY.delete(`business_facts:${ownerName}`);
+							await env.CONVERSATION_HISTORY.delete(`business_facts:${ownerData.name}`);
 						}
 					}
 				}
