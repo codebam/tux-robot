@@ -232,12 +232,16 @@ async function chargeStars(
 
 function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: ExecutionContext) {
 	bot.use(async (ctx, next) => {
+		console.log('[Middleware] Attaching env and executionCtx to context');
 		ctx.env = env;
 		ctx.executionCtx = executionCtx;
 		await next();
 	});
 
 	bot.use(async (ctx, next) => {
+		if (!ctx.env) {
+			console.error('[Middleware] ctx.env is undefined in second middleware!');
+		}
 		const token = ctx.env.SECRET_TELEGRAM_API_TOKEN;
 		const botTtl = (await ctx.env.CONVERSATION_HISTORY.get<number>(`ttl:${token.slice(0, 10)}`, 'json')) ?? 2;
 
@@ -743,6 +747,10 @@ export class AIWorkflow extends WorkflowEntrypoint<Environment, any> {
 
 export default {
 	async fetch(request: Request, env: Environment, executionCtx: ExecutionContext): Promise<Response> {
+		console.log(`[Fetch] Incoming request: ${request.method} ${request.url}`);
+		if (!env.SECRET_TELEGRAM_API_TOKEN) {
+			console.error('[Fetch] SECRET_TELEGRAM_API_TOKEN is missing from env!');
+		}
 		const bot = new Bot<MyContext>(env.SECRET_TELEGRAM_API_TOKEN);
 		setupBot(bot, env, executionCtx);
 
