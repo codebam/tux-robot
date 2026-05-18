@@ -284,8 +284,15 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 		await next();
 	});
 
+	bot.use(async (ctx, next) => {
+		console.log(`[Update] Type: ${ctx.updateType}, Text: ${ctx.message?.text || 'N/A'}`);
+		await next();
+	});
+
 	bot.command('start', async (ctx) => {
-		await ctx.reply(
+		console.log('[Command] /start received');
+		try {
+			await ctx.reply(
 			'Welcome! Here are my commands:\n' +
 				'/balance - Check your current Star balance\n' +
 				'/load <amount> - Top up your balance with Telegram Stars\n' +
@@ -307,6 +314,10 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 				},
 			},
 		);
+		console.log('[Command] /start reply sent');
+		} catch (e) {
+			console.error('[Command] Error in /start command:', e);
+		}
 	});
 
 	bot.command('balance', async (ctx) => {
