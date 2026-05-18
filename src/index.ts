@@ -242,24 +242,45 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 	});
 
 	bot.use(async (ctx, next) => {
+		console.log('[Middleware] Entering TTL check middleware');
 		const token = env.SECRET_TELEGRAM_API_TOKEN;
-		const botTtl = (await env.CONVERSATION_HISTORY.get<number>(`ttl:${token.slice(0, 10)}`, 'json')) ?? 2;
+		console.log(`[Middleware] Token (first 10): ${token.slice(0, 10)}`);
+		
+		try {
+			const botTtl = (await env.CONVERSATION_HISTORY.get<number>(`ttl:${token.slice(0, 10)}`, 'json')) ?? 2;
+			console.log(`[Middleware] botTtl: ${botTtl}`);
 
-		const isSelf = ctx.from?.id === ctx.me.id;
-		const counterKey = `ttl_counter:${ctx.chat?.id}:${token.slice(0, 10)}`;
-
-		if (isSelf) {
-			const count = (await env.CONVERSATION_HISTORY.get<number>(counterKey, 'json')) ?? 0;
-			if (count >= botTtl) {
-				console.log(`TTL exceeded for chat ${ctx.chat?.id}. Blocking update.`);
-				return;
+			if (!ctx.me) {
+				console.log('[Middleware] ctx.me is undefined, fetching bot info...');
+				// @ts-ignore
+				ctx.me = await ctx.api.getMe();
+				console.log(`[Middleware] Fetched bot info: @${ctx.me.username}`);
 			}
-			await env.CONVERSATION_HISTORY.put(counterKey, JSON.stringify(count + 1), {
-				expirationTtl: 3600,
-			});
-		} else {
-			await env.CONVERSATION_HISTORY.delete(counterKey);
+
+			const isSelf = ctx.from?.id === ctx.me.id;
+			console.log(`[Middleware] isSelf: ${isSelf} (from: ${ctx.from?.id}, me: ${ctx.me.id})`);
+			
+			const counterKey = `ttl_counter:${ctx.chat?.id}:${token.slice(0, 10)}`;
+
+			if (isSelf) {
+				const count = (await env.CONVERSATION_HISTORY.get<number>(counterKey, 'json')) ?? 0;
+				console.log(`[Middleware] Self-message count: ${count}`);
+				if (count >= botTtl) {
+					console.log(`TTL exceeded for chat ${ctx.chat?.id}. Blocking update.`);
+					return;
+				}
+				await env.CONVERSATION_HISTORY.put(counterKey, JSON.stringify(count + 1), {
+					expirationTtl: 3600,
+				});
+			} else {
+				console.log('[Middleware] Regular message, clearing TTL counter');
+				await env.CONVERSATION_HISTORY.delete(counterKey);
+			}
+		} catch (e) {
+			console.error('[Middleware] Error in TTL middleware:', e);
 		}
+		
+		console.log('[Middleware] Proceeding to next handlers');
 		await next();
 	});
 
