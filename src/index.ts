@@ -230,7 +230,13 @@ async function chargeStars(
 	}
 }
 
-function setupBot(bot: Bot<MyContext>) {
+function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: ExecutionContext) {
+	bot.use(async (ctx, next) => {
+		ctx.env = env;
+		ctx.executionCtx = executionCtx;
+		await next();
+	});
+
 	bot.use(async (ctx, next) => {
 		const token = ctx.env.SECRET_TELEGRAM_API_TOKEN;
 		const botTtl = (await ctx.env.CONVERSATION_HISTORY.get<number>(`ttl:${token.slice(0, 10)}`, 'json')) ?? 2;
@@ -738,7 +744,7 @@ export class AIWorkflow extends WorkflowEntrypoint<Environment, any> {
 export default {
 	async fetch(request: Request, env: Environment, executionCtx: ExecutionContext): Promise<Response> {
 		const bot = new Bot<MyContext>(env.SECRET_TELEGRAM_API_TOKEN);
-		setupBot(bot);
+		setupBot(bot, env, executionCtx);
 
 		if (request.method === 'GET') {
 			const url = new URL(request.url);
