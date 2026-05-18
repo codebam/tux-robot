@@ -4,11 +4,22 @@ on:
   push:
     branches:
       - main
+      - master
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: dev
+    environment: ${{ inputs.environment || ((github.ref_name == 'main' || github.ref_name == 'master') && 'prod' || 'dev') }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -21,6 +32,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Use 'dev' environment in wrangler.toml if the GitHub environment is 'dev'
+          environment: ${{ (inputs.environment || ((github.ref_name == 'main' || github.ref_name == 'master') && 'prod' || 'dev')) == 'dev' && 'dev' || '' }}
           secrets: |
             SECRET_TELEGRAM_API_TOKEN
             TAVILY_API_KEY
