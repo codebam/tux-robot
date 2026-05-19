@@ -6,7 +6,7 @@ import { CommandGroup, type CommandsFlavor } from '@grammyjs/commands';
 import { conversations, createConversation, type Conversation, type ConversationFlavor } from '@grammyjs/conversations';
 import { KvAdapter } from '@grammyjs/storage-cloudflare';
 import type { KVNamespace as CfKVNamespace } from '@cloudflare/workers-types';
-import { HistoryManager, getBalance, markdownToHtml, SYSTEM_PROMPTS, AVAILABLE_MODELS, type Task, type Environment, type GeminiPart, type ChatMessage } from '@codebam/shared';
+import { HistoryManager, getBalance, markdownToMarkdownV2, SYSTEM_PROMPTS, AVAILABLE_MODELS, type Task, type Environment, type GeminiPart, type ChatMessage } from '@codebam/shared';
 import { fetchTool, wikipediaTool, createTavilySearchTool, createSandboxTool } from './lib/utils.js';
 import { createTelegramFileReaderTool, createTelegramFileSearchTool } from './lib/documentTool.js';
 import { streamAiResponseToTelegram, customRunWithTools } from './lib/ai.js';
@@ -290,14 +290,14 @@ export function createChatConversation(env: Environment, executionCtx: Execution
 			if (prompt) {
 				if (geminiParts.some((p) => p.inlineData) && !modelConfig.supportsVision) {
 					await ctx.reply(
-						`⚠️ Your current model (<b>${modelPreference}</b>) does not support vision/images.\n\n` +
+						`⚠️ Your current model (*${modelPreference}*) does not support vision/images.\n\n` +
 							`Please switch to a vision-enabled model using:\n` +
-							`- <code>/model kimi-k2.6</code> (40 Stars)\n` +
-							`- <code>/model gemma4</code> (10 Stars)\n` +
-							`- <code>/model google/gemini-3.1-flash-lite</code> (10 Stars)\n` +
-							`- <code>/model llama-3.2-vision</code> (10 Stars)\n` +
-							`- <code>/model google/gemini-3.1-pro</code> (80 Stars)`,
-						{ parse_mode: 'HTML' }
+							`- \`/model kimi-k2.6\` (40 Stars)\n` +
+							`- \`/model gemma4\` (10 Stars)\n` +
+							`- \`/model google/gemini-3.1-flash-lite\` (10 Stars)\n` +
+							`- \`/model llama-3.2-vision\` (10 Stars)\n` +
+							`- \`/model google/gemini-3.1-pro\` (80 Stars)`,
+						{ parse_mode: 'MarkdownV2' }
 					);
 					ctx = await conversation.wait();
 					continue;
@@ -495,19 +495,19 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 		if (selectedModel) {
 			if (selectedModel in AVAILABLE_MODELS) {
 				await ctx.env.CONVERSATION_HISTORY.put(modelKey, selectedModel);
-				await ctx.reply(`Model updated to <b>${selectedModel}</b>.`, { parse_mode: 'HTML' });
+				await ctx.reply(`Model updated to *${selectedModel}*.`, { parse_mode: 'MarkdownV2' });
 			} else {
 				await ctx.reply(`Invalid model. Available models:\n${Object.keys(AVAILABLE_MODELS).join('\n')}`);
 			}
 		} else {
 			const currentModel = (await ctx.env.CONVERSATION_HISTORY.get<string>(modelKey)) ?? 'glm-4.7-flash';
 			await ctx.reply(
-				`Current model: <b>${currentModel}</b>\n\n` +
+				`Current model: *${currentModel}*\n\n` +
 					`Available models:\n` +
 					Object.entries(AVAILABLE_MODELS)
-						.map(([name, cfg]) => `- <code>${name}</code> (${String(cfg.cost)} Stars)`)
+						.map(([name, cfg]) => `- \`${name}\` (${String(cfg.cost)} Stars)`)
 						.join('\n'),
-				{ parse_mode: 'HTML' },
+				{ parse_mode: 'MarkdownV2' },
 			);
 		}
 	});
@@ -637,7 +637,7 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 					title: 'Please complete your sentence',
 					input_message_content: {
 						message_text: 'End your sentence with a period (.) or question mark (?) to get an AI response',
-						parse_mode: 'HTML',
+						parse_mode: 'MarkdownV2',
 					},
 				},
 			]);
@@ -660,8 +660,8 @@ function setupBot(bot: Bot<MyContext>, env: Environment, executionCtx: Execution
 						id: 'ai_response',
 						title: 'AI Response',
 						input_message_content: {
-							message_text: await markdownToHtml(aiResponse.response),
-							parse_mode: 'HTML',
+							message_text: await markdownToMarkdownV2(aiResponse.response),
+							parse_mode: 'MarkdownV2',
 						},
 					},
 				]);
