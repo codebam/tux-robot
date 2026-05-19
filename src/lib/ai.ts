@@ -417,7 +417,6 @@ export interface StreamChunk {
 async function* runStream(ai: AiRunner, model: string, messages: ChatMessage[], tools: Tool[] = [], onStatusUpdate?: (status: 'Thinking' | 'Reasoning') => void): AsyncGenerator<StreamChunk, void, unknown> {
 	const startTime = Date.now();
 	console.log(`[runStream] Starting stream for model: ${model} at ${new Date(startTime).toISOString()}`);
-	yield { type: 'content', text: '' }; // Yield immediately to satisfy TTFT and unblock UI
 
 	const response = await customRunWithTools(ai, model, { messages, tools }, { streamFinalResponse: true });
 	const filter = createThinkFilter();
@@ -607,11 +606,11 @@ async function formatTelegramMessage(
 	isFinal = false
 ): Promise<{ text: string; parse_mode: 'MarkdownV2' }> {
 	let message = '';
-	if (thinking) {
+	if (thinking && thinking.trim()) {
 		const thinkingFormatted = isFinal ? await markdownToMarkdownV2(thinking.trim()) : thinking.trim();
 		message += thinkingFormatted.replace(/\n\n$/, '\n').split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
 	}
-	if (reasoning) {
+	if (reasoning && reasoning.trim()) {
 		const reasoningFormatted = isFinal ? await markdownToMarkdownV2(reasoning.trim()) : reasoning.trim();
 		message += reasoningFormatted.split('\n').map(line => `> ${line}`).join('\n') + '\n\n';
 	}
@@ -622,7 +621,7 @@ async function formatTelegramMessage(
 		message += content;
 	}
 
-	return { text: message, parse_mode: 'MarkdownV2' };
+	return { text: message.trim(), parse_mode: 'MarkdownV2' };
 }
 
 /**
